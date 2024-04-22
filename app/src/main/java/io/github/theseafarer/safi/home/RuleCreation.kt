@@ -7,6 +7,7 @@
 package io.github.theseafarer.safi.home
 
 import android.graphics.drawable.Drawable
+import android.util.Log
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -36,6 +37,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -53,7 +55,6 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.google.accompanist.drawablepainter.rememberDrawablePainter
-import io.github.theseafarer.safi.data.TransportRuleState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -78,12 +79,6 @@ fun RuleCreationSheet(
     }
 
     val sheetState = rememberModalBottomSheetState()
-    val isSheetFullyExpanded by remember {
-        derivedStateOf {
-            false//sheetState.currentValue == SheetValue.Expanded FIXME
-        }
-    }
-
     LaunchedEffect(Unit) {
         withContext(Dispatchers.Default) {
             val apps = getApps()
@@ -108,14 +103,26 @@ fun RuleCreationSheet(
             }
         }
     }
+
+    val defaultSheetShape = BottomSheetDefaults.ExpandedShape
+    // get rid of sheet's rounded corners if sheet is expanded at full height
+    val sheetShape by remember {
+        derivedStateOf {
+            if (sheetState.currentValue == SheetValue.Expanded
+                && (lazyColumnState.canScrollBackward || lazyColumnState.canScrollForward)
+            ) {
+                RoundedCornerShape(0, 0)
+            } else {
+                defaultSheetShape
+            }
+        }
+    }
+
     ModalBottomSheet(
         containerColor = titleBarColor,
         onDismissRequest = { onDismissed() },
         sheetState = sheetState,
-        shape = if (isSheetFullyExpanded) RoundedCornerShape(
-            0,
-            0
-        ) else BottomSheetDefaults.ExpandedShape
+        shape = sheetShape
     ) {
         // FIXME animation glitches
         AnimatedContent(targetState = state, label = "sheet") {

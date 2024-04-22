@@ -61,6 +61,7 @@ fun ColumnScope.RuleListBox(
         modifier = Modifier
             .fillMaxWidth(0.9f)
             .navigationBarsPadding()
+            .padding(bottom = 16.dp)
             .align(Alignment.CenterHorizontally)
             .background(MaterialTheme.colorScheme.surfaceContainerLow, roundedShape)
             .clip(roundedShape),

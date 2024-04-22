@@ -186,6 +186,8 @@ fun HomeScreen(
     }
 }
 
+// FIXME probably have to make a custom switch composable,
+//  using scale modifier causes pixelation in thumb icons
 @Composable
 private fun BoxScope.MainSwitch(
     state: HomeContract.SwitchState,

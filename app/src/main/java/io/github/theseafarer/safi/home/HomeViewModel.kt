@@ -113,6 +113,8 @@ class HomeViewModel(
         viewModelScope.launch {
             when (event) {
                 is HomeContract.Event.AppRuleEdited -> {
+                    val prevRuleState = _state.value.appRules.find { it.packageName == event.appRule.packageName }
+                    if (prevRuleState != null && prevRuleState.rule == event.appRule.rule) return@launch
                     _state.update { currState ->
                         HomeContract.UiState.appRules.modify(currState) { rules ->
                             rules.map {

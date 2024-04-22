@@ -16,6 +16,7 @@ import android.net.ConnectivityManager.NetworkCallback
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.VpnService
+import android.os.Build
 import android.os.ParcelFileDescriptor
 import android.util.Log
 import androidx.core.content.getSystemService
@@ -232,7 +233,9 @@ internal class ConnectivityChangeWatcher(
     }
 
     override fun onAvailable(network: Network): Unit = runBlocking {
-        val transportType = getTransportType(network) ?: return@runBlocking
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) return@runBlocking
+        val transportType =
+            getTransportType(connMgr.getNetworkCapabilities(network)) ?: return@runBlocking
         Log.i(TAG, "transportType = $transportType")
         if (_state.value != null && _state.value != transportType) {
             onConnectivityChanged(transportType)
@@ -240,24 +243,35 @@ internal class ConnectivityChangeWatcher(
         _state.emit(transportType)
     }
 
-    private fun getTransportType(network: Network? = connMgr.activeNetwork): Int? =
-        connMgr
-            .getNetworkCapabilities(network)
-            ?.let { netCap ->
-                when {
-                    netCap.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ->
-                        NetworkCapabilities.TRANSPORT_WIFI
+    override fun onCapabilitiesChanged(network: Network, networkCapabilities: NetworkCapabilities) = runBlocking {
+        super.onCapabilitiesChanged(network, networkCapabilities)
+        val transportType = getTransportType(networkCapabilities) ?: return@runBlocking
+        Log.i(TAG, "transportType = $transportType")
+        if (_state.value != null && _state.value != transportType) {
+            onConnectivityChanged(transportType)
+        }
+        _state.emit(transportType)
+    }
 
-                    netCap.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) ->
-                        NetworkCapabilities.TRANSPORT_CELLULAR
+    private fun getTransportType(
+        netCap: NetworkCapabilities? =
+            connMgr.getNetworkCapabilities(connMgr.activeNetwork)
+    ): Int? =
+        netCap?.let {
+            when {
+                netCap.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ->
+                    NetworkCapabilities.TRANSPORT_WIFI
 
-                    netCap.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) ->
-                        NetworkCapabilities.TRANSPORT_ETHERNET
+                netCap.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) ->
+                    NetworkCapabilities.TRANSPORT_CELLULAR
 
-                    netCap.hasTransport(NetworkCapabilities.TRANSPORT_BLUETOOTH) ->
-                        NetworkCapabilities.TRANSPORT_BLUETOOTH
+                netCap.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) ->
+                    NetworkCapabilities.TRANSPORT_ETHERNET
 
-                    else -> -1
-                }
+                netCap.hasTransport(NetworkCapabilities.TRANSPORT_BLUETOOTH) ->
+                    NetworkCapabilities.TRANSPORT_BLUETOOTH
+
+                else -> -1
             }
+        }
 }
