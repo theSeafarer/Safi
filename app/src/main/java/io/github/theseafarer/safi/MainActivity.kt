@@ -17,15 +17,20 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import io.github.theseafarer.safi.vpn.VpnService
 import io.github.theseafarer.safi.home.HomeScreen
 import io.github.theseafarer.safi.home.HomeViewModel
 import io.github.theseafarer.safi.ui.theme.SafiTheme
 import io.github.theseafarer.safi.vpn.Command
+import io.github.theseafarer.safi.vpn.VpnService
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -37,7 +42,7 @@ class MainActivity : ComponentActivity() {
         )
         super.onCreate(savedInstanceState)
         setContent {
-
+            // TODO: setup proper navigation
             val vpnReqLauncher =
                 rememberLauncherForActivityResult(contract = ActivityResultContracts.StartActivityForResult()) {
                     if (it.resultCode == RESULT_OK) {
@@ -61,25 +66,35 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    HomeScreen(homeViewModel) {
-                        val reqIntent = android.net.VpnService.prepare(this)
-                        reqIntent?.let {
-                            vpnReqLauncher.launch(it)
-                        } ?: startService(
-                            Intent(
-                                this@MainActivity,
-                                VpnService::class.java
-                            ).apply {
-                                putExtra(
-                                    VpnService.EXTRA_COMMAND,
-                                    if (it) {
-                                        Command.START
-                                    } else {
-                                        Command.STOP
-                                    } as Parcelable
+                    var showInfo by remember { mutableStateOf(false) }
+
+                    AnimatedContent(targetState = showInfo, label = "Main transition") {
+                        if (it) {
+                            InfoScreen {
+                                showInfo = false
+                            }
+                        } else {
+                            HomeScreen(homeViewModel, onInfoClicked = { showInfo = true }) {
+                                val reqIntent = android.net.VpnService.prepare(this@MainActivity)
+                                reqIntent?.let {
+                                    vpnReqLauncher.launch(it)
+                                } ?: startService(
+                                    Intent(
+                                        this@MainActivity,
+                                        VpnService::class.java
+                                    ).apply {
+                                        putExtra(
+                                            VpnService.EXTRA_COMMAND,
+                                            if (it) {
+                                                Command.START
+                                            } else {
+                                                Command.STOP
+                                            } as Parcelable
+                                        )
+                                    }
                                 )
                             }
-                        )
+                        }
                     }
                 }
             }

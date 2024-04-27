@@ -78,7 +78,8 @@ import kotlinx.coroutines.withContext
 @Composable
 fun HomeScreen(
     viewModel: HomeContract = HomeViewModel(App.ruleRepository, App.vpnServiceManager),
-    sendServiceCommand: (Boolean) -> Unit,
+    onInfoClicked: () -> Unit,
+    sendServiceCommand: (Boolean) -> Unit
 ) {
     val context = LocalContext.current
 
@@ -115,7 +116,7 @@ fun HomeScreen(
                 TopAppBar(
                     title = { Text(stringResource(id = R.string.app_name)) },
                     actions = {
-                        IconButton(onClick = { /*TODO*/ }) {
+                        IconButton(onClick = { onInfoClicked()}) {
                             Icon(Icons.TwoTone.Info, "")
                         }
                     },
@@ -156,6 +157,7 @@ fun HomeScreen(
                 RuleCreationSheet(
                     defaultRules = uiState.defaultRuleState,
                     getApps = {
+                        // FIXME should include sys apps
                         withContext(Dispatchers.Default) {
                             context.packageManager
                                 .getInstalledApplications(0)
@@ -167,6 +169,7 @@ fun HomeScreen(
                                         it.loadLabel(context.packageManager).toString()
                                     )
                                 }
+                                .sortedBy { it.displayName }
                         }
                     },
                     loadAppIcon = {
@@ -284,33 +287,6 @@ fun ColumnScope.DefaultRuleBox(
     }
 }
 
-//FIXME
-internal fun Modifier.diagonalStripes(width: Dp, startingOffset: Dp, color: Color): Modifier =
-    drawBehind {
-        val actualWidth = width.toPx()
-        val actualOffset = startingOffset.toPx()
-
-        var x = 0
-
-        clipRect {
-            while (size.width - (actualOffset + (actualWidth * x) + (actualWidth / 5f)) >= 0) {
-                drawLine(
-                    color = color,
-                    start = Offset(
-                        y = size.height + actualWidth,
-                        x = actualOffset + (x * actualWidth) + (actualWidth / 5f)
-                    ),
-                    end = Offset(
-                        y = 0f - actualWidth,
-                        x = actualOffset + (x * actualWidth) + actualWidth
-                    ),
-                    strokeWidth = actualWidth
-                )
-                x += 2
-            }
-        }
-    }
-
 @Preview(apiLevel = 34)
 @Composable
 private fun HomeScreenPreview() {
@@ -326,5 +302,5 @@ private fun HomeScreenPreview() {
         override val effect: SharedFlow<HomeContract.Effect> = MutableSharedFlow()
 
         override fun onEvent(event: HomeContract.Event) {}
-    }) { }
+    }, { }, {})
 }

@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -27,7 +28,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -41,12 +41,25 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.core.graphics.ColorUtils
 import com.google.accompanist.drawablepainter.rememberDrawablePainter
+import io.github.theseafarer.safi.data.TransportRuleState
 import io.github.theseafarer.safi.ui.theme.roundedShape
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -154,11 +167,35 @@ private fun RuleListHeader() {
             )
             Spacer(modifier = Modifier.width(16.dp))
         }
-        HorizontalDivider(
-            Modifier
-                .fillMaxWidth()
-                .align(Alignment.BottomCenter)
-        )
+//        HorizontalDivider(
+//            Modifier
+//                .fillMaxWidth()
+//                .align(Alignment.BottomCenter)
+//        )
+    }
+}
+
+@Preview
+@Composable
+private fun RuleBoxPreview() {
+    Box(
+        modifier = Modifier
+            .background(MaterialTheme.colorScheme.surfaceContainerLow)
+            .fillMaxWidth(1f)
+            .height(90.dp)
+    ) {
+        RuleBox(
+            iconPainter = rememberDrawablePainter(drawable = null),
+            displayName = "Display Name",
+            state = HomeContract.AppRuleState(
+                "fake.package.name",
+                HomeContract.RuleState(TransportRuleState.BLOCKED, TransportRuleState.ALLOWED),
+                false
+            ),
+            onDeleteClicked = {}
+        ) {
+
+        }
     }
 }
 
@@ -178,9 +215,11 @@ private fun RuleBox(
             .clickable { showMenu = true }
             .then(
                 if (state.applied) Modifier else Modifier.diagonalStripes(
-                    60.dp,
-                    24.dp,
-                    Color.Gray
+                    36.dp,
+                    12.dp,
+                    Color(ColorUtils.blendARGB(MaterialTheme.colorScheme.error.toArgb(),
+                        MaterialTheme.colorScheme.surfaceContainer.toArgb(),
+                        0.6f))
                 )
             )
             .padding(vertical = 16.dp)
@@ -204,7 +243,7 @@ private fun RuleBox(
                 .weight(1f)
                 .aspectRatio(1f), state = state.rule.wifiState
         )
-        VerticalDivider(Modifier.padding(vertical = 12.dp)) //FIXME
+        VerticalDivider() //FIXME
         DotIndicator(
             modifier = Modifier
                 .size(12.dp)
@@ -224,3 +263,46 @@ private fun RuleBox(
             })
     }
 }
+
+internal fun Modifier.dashBorder(color: Color) = this.drawBehind {
+    drawRect(
+        color = color,
+        size = Size(width = size.width - 10.dp.toPx(), height = size.height - 10.dp.toPx()),
+        topLeft = Offset(5.dp.toPx(), 5.dp.toPx()),
+        style = Stroke(
+            width = 5.dp.toPx(),
+            join = StrokeJoin.Miter,
+            pathEffect = PathEffect.dashPathEffect(
+                intervals = floatArrayOf(40f, 40f),
+                phase = 0f
+            )
+        )
+    )
+}
+
+//FIXME
+internal fun Modifier.diagonalStripes(width: Dp, startingOffset: Dp, color: Color): Modifier =
+    drawBehind {
+        val actualWidth = width.toPx()
+        val actualOffset = startingOffset.toPx()
+
+        var x = 0
+
+        clipRect {
+            while (size.width - (actualOffset + (actualWidth * x) + (actualWidth / 5f)) >= 0) {
+                drawLine(
+                    color = color,
+                    start = Offset(
+                        y = size.height + actualWidth,
+                        x = actualOffset + (x * actualWidth) + (actualWidth / 5f)
+                    ),
+                    end = Offset(
+                        y = 0f - actualWidth,
+                        x = actualOffset + (x * actualWidth) + actualWidth
+                    ),
+                    strokeWidth = actualWidth
+                )
+                x += 2
+            }
+        }
+    }
